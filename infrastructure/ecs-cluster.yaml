@@ -1,0 +1,26 @@
+Description: >
+  This template creates an ECS cluster
+
+  aws cloudformation create-stack --stack-name ecs-cluster-stack \
+  --template-body file://ecs-cluster.yaml \
+  --parameters ParameterKey=EnvironmentName,ParameterValue=development
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${EnvironmentName}-ECS-Cluster
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} ECS Cluster
+
+
+Outputs:
+  Cluster:
+    Description: A reference to the ECS cluster
+    Value: !Ref ECSCluster

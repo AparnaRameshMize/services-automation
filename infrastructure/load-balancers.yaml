@@ -1,0 +1,147 @@
+Description: >
+  This template deploys an Application Load Balancer that exposes our various ECS services.
+  We create them in a seperate nested template, so it can be referenced by all of the other nested templates.
+
+  aws cloudformation create-stack --stack-name ecs-lb-stack \
+  --template-body file://load-balancers.yaml \
+  --parameters ParameterKey=EnvironmentName,ParameterValue=development \
+  ParameterKey=VPC,ParameterValue=vpc-04d5c82d0c6314954 \
+  ParameterKey=PublicSubnets,ParameterValue=subnet-05fe250b5e93dd8cb\\,subnet-044176ef8709cc235 \
+  ParameterKey=PrivateSubnets,ParameterValue=subnet-0e861ff8984299263\\,subnet-09628a956e824285f \
+  ParameterKey=PublicLoadBalancerSecurityGroup,ParameterValue=sg-09765d925b9fb63bd \
+  ParameterKey=PrivateLoadBalancerSecurityGroup,ParameterValue=sg-0a61b6505d51f609f
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: Choose which VPC the Load Balancers should be deployed to
+
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+
+  PublicLoadBalancerSecurityGroup:
+    Description: Select the Security Group to apply to the Public Load Balancer
+    Type: AWS::EC2::SecurityGroup::Id
+
+  PrivateLoadBalancerSecurityGroup:
+    Description: Select the Security Group to apply to the Private Load Balancer
+    Type: AWS::EC2::SecurityGroup::Id
+
+Resources:
+  PublicLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    # DependsOn: GatewayAttachement
+    Properties:
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+      - Key: idle_timeout.timeout_seconds
+        Value: '30'
+      Subnets: !Ref PublicSubnets
+        # The load balancer is placed into the public subnets, so that traffic
+        # from the internet can reach the load balancer directly via the internet gateway
+        # - !Ref PublicSubnetOne
+        # - !Ref PublicSubnetTwo
+      SecurityGroups: [!Ref 'PublicLoadBalancerSecurityGroup']
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} PublicLoadBalancer
+  # A dummy target group is used to setup the ALB to just drop traffic
+  # initially, before any real service target groups have been added.
+  DummyTargetGroupPublic:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      # Name: !Join ['-', [!Ref 'AWS::StackName', 'drop-1']]
+      Name: tg1
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref 'VPC'
+  PublicLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    # DependsOn:
+    #   - PublicLoadBalancer
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref 'DummyTargetGroupPublic'
+          Type: 'forward'
+      LoadBalancerArn: !Ref 'PublicLoadBalancer'
+      Port: 80
+      Protocol: HTTP
+
+  PrivateLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internal
+      LoadBalancerAttributes:
+      - Key: idle_timeout.timeout_seconds
+        Value: '30'
+      Subnets: !Ref PrivateSubnets
+        # This load balancer is put into the private subnet, so that there is no
+        # route for the public to even be able to access the private load balancer.
+        # - !Ref PrivateSubnetOne
+        # - !Ref PrivateSubnetTwo
+      SecurityGroups: [!Ref 'PrivateLoadBalancerSecurityGroup']
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private LoadBalancer
+  # This dummy target group is used to setup the ALB to just drop traffic
+  # initially, before any real service target groups have been added.
+  DummyTargetGroupPrivate:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      # Name: !Join ['-', [!Ref 'AWS::StackName', 'drop-2']]
+      Name: tg2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref 'VPC'
+  PrivateLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    # DependsOn:
+    #   - PrivateLoadBalancer
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref 'DummyTargetGroupPrivate'
+          Type: 'forward'
+      LoadBalancerArn: !Ref 'PrivateLoadBalancer'
+      Port: 80
+      Protocol: HTTP
+
+Outputs:
+  InternalUrl:
+    Description: The url of the internal load balancer
+    Value: !Join ['', ['http://', !GetAtt 'PrivateLoadBalancer.DNSName']]
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'InternalUrl' ] ]
+  ExternalUrl:
+    Description: The url of the external load balancer
+    Value: !Join ['', ['http://', !GetAtt 'PublicLoadBalancer.DNSName']]
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ExternalUrl' ] ]
+  PublicListener:
+    Description: The ARN of the public load balancer's Listener
+    Value: !Ref PublicLoadBalancerListener
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PublicListener' ] ]
+  PrivateListener:
+    Description: The ARN of the public load balancer's Listener
+    Value: !Ref PrivateLoadBalancerListener
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateListener' ] ]
