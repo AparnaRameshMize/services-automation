@@ -19,8 +19,9 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName} ECS Cluster
 
-
 Outputs:
-  Cluster:
-    Description: A reference to the ECS cluster
-    Value: !Ref ECSCluster
+  ClusterName:
+    Description: The name of the ECS cluster
+    Value: !Ref 'ECSCluster'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ClusterName' ] ]

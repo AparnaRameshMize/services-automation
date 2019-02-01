@@ -1,6 +1,10 @@
 Description: >
   Template to create the resources needed to run ECS Services.
+  
+  aws cloudformation create-stack --stack-name ecs-stack-devl --template-body file://master.yaml --capabilities CAPABILITY_IAM
 
+  aws cloudformation update-stack --stack-name ecs-stack-devl --template-body file://master.yaml --capabilities CAPABILITY_IAM
+  
 Resources:
   VPC:
     Type: AWS::CloudFormation::Stack
@@ -45,3 +49,46 @@ Resources:
       TemplateURL: https://s3.amazonaws.com/rnella01deepdive/ecs-cluster.yaml
       Parameters:
         EnvironmentName: !Ref AWS::StackName
+
+Outputs:
+  PublicListener:
+    Description: The ARN of the public load balancer's Listener (from ALB stack)
+    Value: !GetAtt 'ALB.Outputs.PublicListener'
+    Export: 
+      Name: !Join [':', [!Ref 'AWS::StackName', 'PublicListener']]
+
+  VPCId:
+    Description: The ID of the VPC that this stack is deployed in (from VPC stack)
+    Value: !GetAtt VPC.Outputs.VPCId
+    Export:
+      Name: !Join [':', [!Ref 'AWS::StackName', 'VPCId']]
+
+  PrivateSubnet1:
+    Description: A reference to the public subnet in the 1st Availability Zone (from VPC stack)
+    Value: !GetAtt VPC.Outputs.PrivateSubnet1
+    Export:
+      Name: !Join [':', [!Ref 'AWS::StackName', 'PrivateSubnet1']]
+
+  PrivateSubnet2:
+    Description: A reference to the public subnet in the 2nd Availability Zone (from VPC stack)
+    Value: !GetAtt VPC.Outputs.PrivateSubnet2
+    Export:
+      Name: !Join [':', [!Ref 'AWS::StackName', 'PrivateSubnet2']]
+  
+  ECSTaskExecutionRole:
+    Description: The ARN of the ECS role
+    Value: !GetAtt IAM.Outputs.ECSTaskExecutionRole
+    Export:
+      Name: !Join [':', [!Ref 'AWS::StackName', 'ECSTaskExecutionRole']]
+
+  ClusterName:
+    Description: The name of the ECS cluster
+    Value: !GetAtt ECS.Outputs.ClusterName
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ClusterName' ] ]
+
+  FargateContainerSecurityGroup:
+    Description: A security group used to allow Fargate containers to receive traffic
+    Value: !GetAtt SecurityGroups.Outputs.FargateContainerSecurityGroup
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'FargateContainerSecurityGroup' ] ]

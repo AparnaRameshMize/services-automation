@@ -206,6 +206,12 @@ Outputs:
     Description: A reference to the created VPC
     Value: !Ref VPC
 
+  VPCId:
+    Description: The ID of the VPC that this stack is deployed in
+    Value: !Ref 'VPC'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'VPCId' ] ]
+
   PublicSubnets:
     Description: A list of the public subnets
     Value: !Join [",", [!Ref PublicSubnet1, !Ref PublicSubnet2]]
@@ -214,18 +220,22 @@ Outputs:
     Description: A list of the private subnets
     Value: !Join [",", [!Ref PrivateSubnet1, !Ref PrivateSubnet2]]
 
-  PublicSubnet1:
-    Description: A reference to the public subnet in the 1st Availability Zone
-    Value: !Ref PublicSubnet1
+  # PublicSubnet1:
+  #   Description: A reference to the public subnet in the 1st Availability Zone
+  #   Value: !Ref PublicSubnet1
 
-  PublicSubnet2:
-    Description: A reference to the public subnet in the 2nd Availability Zone
-    Value: !Ref PublicSubnet2
+  # PublicSubnet2:
+  #   Description: A reference to the public subnet in the 2nd Availability Zone
+  #   Value: !Ref PublicSubnet2
 
   PrivateSubnet1:
-    Description: A reference to the private subnet in the 1st Availability Zone
-    Value: !Ref PrivateSubnet1
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnet1' ] ]
 
   PrivateSubnet2:
-    Description: A reference to the private subnet in the 2nd Availability Zone
+    Description: A reference to the public subnet in the 2nd Availability Zone
     Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnet2' ] ]

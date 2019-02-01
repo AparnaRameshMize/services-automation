@@ -73,5 +73,7 @@ Outputs:
     Description: Role which authorizes ECS to manage resources in the account
     Value: !Ref 'ECSRole'
   ECSTaskExecutionRole:
-    Description: Role used by the ECS tasks.
-    Value: !Ref 'ECSTaskExecutionRole'
+    Description: The ARN of the ECS role
+    Value: !GetAtt 'ECSTaskExecutionRole.Arn'
+    Export:
+      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ECSTaskExecutionRole' ] ]
